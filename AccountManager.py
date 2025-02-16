@@ -5,16 +5,16 @@ class AccountManager(object):
     """
     
     # We do not have an __init__ function and will call the default constructor.
-    
     def round_balance(self, bank_accounts, account_number):
-        '''Rounds the given amount to two decimal places.
+        '''Rounds the balance of the account with the given account_number to two decimal places.
         '''
-        amount = self.get_account(bank_accounts, account_number)
-        if amount is not None:
-            balance = round(amount, 2)
-            return balance
+        account = self.get_account(bank_accounts, account_number)
+        if account is not None:
+            account.balance = round(account.balance, 2)
+            bank_accounts[account_number] = account
+            return account
         else:
-            print('Sorry there is no money in your account.')
+            print('Sorry, the account does not exist.')
             return None
         
         
@@ -22,7 +22,7 @@ class AccountManager(object):
         '''Returns the Account object for the given account_number.
         If the account doesn't exist, returns None
         '''
-        return bank_accounts.get(account_number, None)
+        return bank_accounts.get(account_number)
 
     def withdraw(self, bank_accounts, account_number, amount):
         '''Withdraws the given amount from the account with the given account_number.
@@ -31,19 +31,20 @@ class AccountManager(object):
         Raises a RuntimeError if the given amount is greater than the available balance.
         Prints the new balance.
         '''
-        balance = self.get_account(bank_accounts, account_number)
+        account = self.round_balance(bank_accounts, account_number)
         
-        if balance is None:
+        if account is None:
             print('Your account does not exist!')
+            return ''
 
-        if amount > balance:
+        if amount > account.balance:
             print('Not enought money in your bank account.')
-            raise RuntimeError
+            raise RuntimeError('Insuficient funds')
        
-        balance -= amount
-        bank_accounts[account_number] = balance
-
-        print(f"Your balance is {balance:.2f}.")
+        account.balance = round(account.balance - amount, 2)
+        print(f"Your balance is {account.balance}.")
+        bank_accounts[account_number] = account
+        return account
         
 
     def deposit(self, bank_accounts, account_number, amount):
@@ -53,13 +54,11 @@ class AccountManager(object):
         Prints the new balance.
         '''
 
-        balance = self.get_account(bank_accounts,account_number)
-        if balance is not None:
-            balance += amount
-            bank_accounts[account_number] = balance
-            balance = self.round_balance(bank_accounts, account_number)
-            print(f"Your new balance is: {balance}")
-
+        account = self.round_balance(bank_accounts, account_number)
+        if account is not None:
+            account.balance = round(account.balance + amount,2)
+            bank_accounts[account_number] = account
+            print(f"Your new balance is: {account.balance}")
         else:
             print("Your account does not exist.")
 
@@ -72,19 +71,22 @@ class AccountManager(object):
         Prints the new balance.
         '''
 
-        balance = self.get_account(bank_accounts, account_number)
-        salestax = self.calculate_sales_tax(amounts)
-        if balance is not None:
-            purchase = amounts + salestax
-            if purchase > balance:
-                raise RuntimeError
-            else:
-                balance -= purchase
-                bank_accounts[account_number] = balance
-                balance = self.round_balance(bank_accounts, account_number)
-                print(f"Your balance is: {balance}")
+        account = self.get_account(bank_accounts, account_number)
+
+        if account is None:
+            print('Your account does not exist!')
+            return
+
+        total_amount = sum(amounts)
+        salestax = self.calculate_sales_tax(total_amount)
+        purchase = total_amount + salestax
+
+        if purchase > account.balance:
+            raise RuntimeError('Insuficient funds to make purchases!')
         else:
-            print("Your account does not exist.")
+            account.balance = round(account.balance - purchase, 2)
+            bank_accounts[account_number] = account
+            print(f"Your balance is: {account.balance}")
 
 
     @staticmethod
@@ -122,7 +124,7 @@ class AccountManager(object):
         if sort_direction.lower() not in ['asc', 'desc']:
             return 'Invalid input'
         
-        # Convert bank_accounts dictionary to a list of tuples
+        # Convert bank_accounts dictionary to a list of Account objects
         accounts_list = list(bank_accounts.values())
         
         # Determine if the sorting should be in reverse order
@@ -130,16 +132,15 @@ class AccountManager(object):
         
         # Sort based on the specified sort_type
         if sort_type.lower() == 'account_number':
-            accounts_list.sort(key= lambda account: account['account_number'], reverse=reverse)
+            accounts_list.sort(key=lambda account: account.account_number, reverse=reverse)
         elif sort_type.lower() == 'first_name':
-            accounts_list.sort(key=lambda f_name: f_name['first_name'], reverse=reverse)
+            accounts_list.sort(key=lambda account: account.first_name, reverse=reverse)
         elif sort_type.lower() == 'last_name':
-            accounts_list.sort(key=lambda l_name: l_name['last_name'], reverse=reverse)
+            accounts_list.sort(key=lambda account: account.last_name, reverse=reverse)
         elif sort_type.lower() == 'balance':
-            accounts_list.sort(key=lambda balance: balance['balance'], reverse=reverse)
+            accounts_list.sort(key=lambda account: account.balance, reverse=reverse)
         
-        return accounts_list
-        
+        return [(account.account_number, account.first_name, account.last_name, account.balance) for account in accounts_list]
 
     def export_statement(self, bank_accounts, account_number, output_file):
         '''Exports the given account information to the given output file in the following format:

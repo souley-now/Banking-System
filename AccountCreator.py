@@ -53,31 +53,29 @@ class AccountCreator(object):
         with open(accounts, 'r') as stream:
             for line in stream:
                 account_number, first_name, last_name = line.strip().split('|')
-                bank_accounts[account_number] = {
-                    'first_name': first_name, 
-                    'last_name': last_name, 
-                    'balance': 0.0
-                }
+                bank_accounts[account_number] = Account(account_number, first_name, last_name)
 
         deposits = 'deposits.csv'
         with open(deposits, 'r') as stream:
             for line in stream:
                 if len(line.strip()) > 0:
                     parts = line.strip().split(',')
-                    account_number = parts[0]
+                    account_number = parts[0].strip()
                     if account_number in bank_accounts:
                         for amount in parts[1:]:
-                            bank_accounts[account_number]['balance'] += float(amount)
+                            if amount.strip():
+                                bank_accounts[account_number].balance += float(amount.strip())
 
         withdrawals = 'withdrawals.csv'
         with open(withdrawals, 'r') as stream:
             for line in stream:
                 if len(line.strip()) > 0:
                     parts = line.strip().split(',')
-                    account_number = parts[0]
+                    account_number = parts[0].strip()
                     if account_number in bank_accounts:
                         for amount in parts[1:]:
-                            bank_accounts[account_number]['balance'] -= float(amount)
+                            if amount.strip():
+                                bank_accounts[account_number].balance -= float(amount.strip())
                         
         return bank_accounts
- 
+                            
